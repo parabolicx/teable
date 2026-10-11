@@ -18,6 +18,7 @@ import {
 import { syncCopy } from '../../utils';
 import { ExpandRecord } from './ExpandRecord';
 import { useExpandRecordNavigation } from './ExpandRecordNavigationContext';
+import { ModalContext } from './ModalContext';
 import type { ExpandRecordModel } from './type';
 
 const { toast } = sonner;
@@ -89,6 +90,7 @@ export const ExpandRecorder = (props: IExpandRecorderProps) => {
   // in useCommentPermission, which carries the same share-view exclusion.
   const { shareId } = useContext(ShareViewContext);
   const isShareContext = Boolean(shareId);
+  const parentModal = useContext(ModalContext);
 
   const isForeignTable = isLinkedRecord || (Boolean(currentTableId) && tableId !== currentTableId);
   const foreignTableName = useMemo(() => {
@@ -212,6 +214,7 @@ export const ExpandRecorder = (props: IExpandRecorderProps) => {
     <div id={`${tableId}-${recordId}`}>
       <Wrap tableId={tableId}>
         <ExpandRecord
+          primaryRecord={!isForeignTable && !isShareContext && !parentModal.isRecordModal}
           visible
           model={model}
           recordId={recordId}

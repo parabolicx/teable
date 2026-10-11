@@ -42,6 +42,9 @@ class MyDocument extends Document<Props> {
       <Html lang={rtlUi ? serverLocale : this.props.locale} dir={rtlUi ? 'rtl' : undefined}>
         <Head>
           <meta charSet="utf-8" />
+          {process.env.NEXT_PUBLIC_PARABOLIC_ENABLED === 'true' && (
+            <meta name="parabolic-native" content="v1" />
+          )}
           <link
             rel="apple-touch-icon"
             sizes="180x180"

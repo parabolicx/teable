@@ -1,6 +1,5 @@
 /* eslint-disable sonarjs/no-duplicate-string */
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { IncomingHttpHeaders } from 'http';
 import { tmpdir } from 'os';
 import { join, resolve } from 'path';
 import { Readable } from 'stream';
@@ -16,7 +15,7 @@ import {
   type SignatureRo,
   type SignatureVo,
 } from '@teable/openapi';
-import type { Request, Response } from 'express';
+import type { Request } from 'express';
 import fse from 'fs-extra';
 import mimeTypes from 'mime-types';
 import { nanoid } from 'nanoid';
@@ -30,6 +29,8 @@ import { FileUtils, getSafeAxiosAgents } from '../../utils';
 import { second } from '../../utils/second';
 import { AttachmentsCropQueueProcessor } from './attachments-crop.processor';
 import { AttachmentsStorageService } from './attachments-storage.service';
+import { getLocalFileResponse } from './local-file-response';
+import type { ILocalFileRequest } from './local-file-response';
 import StorageAdapter from './plugins/adapter';
 import type { LocalStorage } from './plugins/local';
 import { extractLocalFilePath, validateReadPath } from './plugins/local.helper';
@@ -86,7 +87,7 @@ export class AttachmentsService {
     );
   }
 
-  async readLocalFile(path: string, token?: string) {
+  async readLocalFile(path: string, token?: string, request?: ILocalFileRequest) {
     const localStorage = this.storageAdapter as LocalStorage;
     validateReadPath(path, localStorage.storageDir);
     let respHeaders: Record<string, string> = {};
@@ -107,34 +108,18 @@ export class AttachmentsService {
       respHeaders['Content-Type'] = getExtensionPreview(attachment.mimetype);
     }
 
-    const headers: Record<string, string> = respHeaders ?? {};
-    const fileStream = localStorage.read(path);
-
-    return { headers, fileStream };
-  }
-
-  localFileConditionalCaching(path: string, reqHeaders: IncomingHttpHeaders, res: Response) {
-    const localStorage = this.storageAdapter as LocalStorage;
-    validateReadPath(path, localStorage.storageDir);
-    const ifModifiedSince = reqHeaders['if-modified-since'];
-    const lastModifiedTimestamp = localStorage.getLastModifiedTime(path);
-    if (!lastModifiedTimestamp) {
+    const metadata = localStorage.getReadMetadata(path);
+    if (!metadata) {
       throw new CustomHttpException('Could not find attachment', HttpErrorCode.VALIDATION_ERROR, {
         localization: {
           i18nKey: 'httpErrors.attachment.invalidPath',
         },
       });
     }
-    // Comparison of accuracy in seconds
-    if (
-      !ifModifiedSince ||
-      Math.floor(new Date(ifModifiedSince).getTime() / 1000) <
-        Math.floor(lastModifiedTimestamp / 1000)
-    ) {
-      res.set('Last-Modified', new Date(lastModifiedTimestamp).toUTCString());
-      return false;
-    }
-    return true;
+    const response = getLocalFileResponse(metadata, request);
+    const headers = { ...respHeaders, ...response.headers };
+    const fileStream = response.stream ? localStorage.read(path, response.range) : undefined;
+    return { headers, fileStream, status: response.status };
   }
 
   async signature(signatureRo: SignatureRo & { internal?: boolean }): Promise<SignatureVo> {

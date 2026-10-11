@@ -15,6 +15,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Separator,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@teable/ui-lib';
 import { CopyPlus, Trash } from 'lucide-react';
 import { useMeasure } from 'react-use';
@@ -23,8 +28,11 @@ import { useCommentPermission, useIsMobile, useTablePermission } from '../../hoo
 import { useContentDir } from '../../hooks/use-content-dir';
 import { useRecordCommentCount } from '../comment/hooks';
 import { TooltipWrap } from './TooltipWrap';
+import type { RecordPresentation } from './useRecordPresentation';
 
 interface IExpandRecordHeader {
+  presentation?: RecordPresentation;
+  onPresentationChange?: (presentation: RecordPresentation) => void;
   tableId: string;
   recordId: string;
   title?: string;
@@ -51,6 +59,8 @@ const MIN_OPERATOR_WIDTH = 200;
 
 export const ExpandRecordHeader = (props: IExpandRecordHeader) => {
   const {
+    presentation,
+    onPresentationChange,
     tableId,
     recordId,
     title,
@@ -243,8 +253,28 @@ export const ExpandRecordHeader = (props: IExpandRecordHeader) => {
           )}
         </div>
       )}
+      {presentation && (
+        <Select
+          value={presentation}
+          onValueChange={(value) => {
+            if (value === 'modal' || value === 'drawer') onPresentationChange?.(value);
+          }}
+        >
+          <SelectTrigger
+            className="w-24 shrink-0"
+            size="sm"
+            aria-label="Record detail presentation"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="modal">Modal</SelectItem>
+            <SelectItem value="drawer">Drawer</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
       {!isMobile && <Separator className="h-6" orientation="vertical" />}
-      <Button variant={'ghost'} size={'icon-xs'} onClick={onClose}>
+      <Button variant={'ghost'} size={'icon-xs'} onClick={onClose} aria-label="Close record detail">
         <X className="size-4 shrink-0" />
       </Button>
     </div>

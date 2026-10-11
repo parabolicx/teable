@@ -6,13 +6,14 @@ import { ModalContext } from './ModalContext';
 export const Modal: FC<
   PropsWithChildren<{
     modal?: boolean;
+    drawer?: boolean;
     className?: string;
     container?: HTMLDivElement;
     visible?: boolean;
     onClose?: () => void;
   }>
 > = (props) => {
-  const { modal, className, children, container, visible, onClose } = props;
+  const { modal, drawer, className, children, container, visible, onClose } = props;
   const ref = useRef<HTMLDivElement>(null);
 
   return (
@@ -20,8 +21,26 @@ export const Modal: FC<
       <DialogContent
         closeable={false}
         container={container}
-        className={cn('h-full block rounded-lg p-0 max-w-4xl', className)}
-        style={{ width: 'calc(100% - 40px)', height: 'calc(100% - 100px)' }}
+        className={cn(
+          'h-full block rounded-lg p-0 max-w-4xl',
+          className,
+          drawer &&
+            'z-20 start-auto end-0 bottom-0 translate-x-0 translate-y-0 rounded-none sm:rounded-none border-y-0 border-e-0 data-[state=open]:animate-none data-[state=closed]:animate-none'
+        )}
+        style={
+          drawer
+            ? {
+                insetInlineStart: 'auto',
+                insetInlineEnd: 0,
+                top: 'calc(var(--fourdx-topbar-height, 0px) + var(--teable-top-banner-height, 0px))',
+                width: 'min(720px, 55vw)',
+                minWidth: '360px',
+                maxWidth: 'calc(100vw - 280px)',
+                height:
+                  'calc(100dvh - var(--fourdx-topbar-height, 0px) - var(--teable-top-banner-height, 0px))',
+              }
+            : { width: 'calc(100% - 40px)', height: 'calc(100% - 100px)' }
+        }
         overlay={
           <DialogOverlay
             onClick={(e) => {
@@ -48,11 +67,21 @@ export const Modal: FC<
           />
         }
         onKeyDown={(e) => {
-          if (e.key === 'Escape') {
+          if (e.key === 'Escape' && (!drawer || !e.defaultPrevented)) {
             onClose?.();
           }
           e.stopPropagation();
         }}
+        onEscapeKeyDown={
+          drawer
+            ? (event) => {
+                // Radix dispatches only to its highest layer, including when focus
+                // is on the uncovered table. Nested editors and selects retain Escape.
+                event.preventDefault();
+                onClose?.();
+              }
+            : undefined
+        }
         onPaste={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
@@ -63,7 +92,9 @@ export const Modal: FC<
         }}
         ref={ref}
       >
-        <ModalContext.Provider value={{ ref }}>{children}</ModalContext.Provider>
+        <ModalContext.Provider value={{ ref, isRecordModal: true }}>
+          {children}
+        </ModalContext.Provider>
       </DialogContent>
     </Dialog>
   );

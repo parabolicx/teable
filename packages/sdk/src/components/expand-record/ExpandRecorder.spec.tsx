@@ -1,7 +1,9 @@
 import { render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ShareViewContext } from '../../context';
 import { syncCopy } from '../../utils';
 import { ExpandRecorder } from './ExpandRecorder';
+import { ModalContext } from './ModalContext';
 
 vi.mock('@teable/openapi', () => ({
   deleteRecord: vi.fn(),
@@ -151,5 +153,32 @@ describe('ExpandRecorder copy record link', () => {
     render(<ExpandRecorder tableId="tblForeign" recordId="recForeign" isLinkedRecord />);
 
     expect(expandRecordProps.onCopyUrl).toBeUndefined();
+  });
+
+  it('marks the page record as primary and keeps same-table linked records modal', () => {
+    const { rerender } = render(<ExpandRecorder tableId="tblA" recordId="recA" />);
+    expect(expandRecordProps.primaryRecord).toBe(true);
+    rerender(<ExpandRecorder tableId="tblA" recordId="recLinked" isLinkedRecord />);
+    expect(expandRecordProps.primaryRecord).toBe(false);
+  });
+
+  it('never marks a nested editor as the primary page record', () => {
+    render(
+      <ModalContext.Provider value={{ ref: { current: null }, isRecordModal: true }}>
+        <ExpandRecorder tableId="tblA" recordId="recNested" />
+      </ModalContext.Provider>
+    );
+    expect(expandRecordProps.primaryRecord).toBe(false);
+  });
+
+  it('keeps records opened from a shared view out of the primary integration', () => {
+    render(
+      <ShareViewContext.Provider
+        value={{ shareId: 'shrMain' } as React.ContextType<typeof ShareViewContext>}
+      >
+        <ExpandRecorder tableId="tblA" recordId="recShared" />
+      </ShareViewContext.Provider>
+    );
+    expect(expandRecordProps.primaryRecord).toBe(false);
   });
 });

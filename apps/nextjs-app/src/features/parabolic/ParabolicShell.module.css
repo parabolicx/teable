@@ -1,0 +1,20 @@
+.shell {
+  display: flex;
+  height: calc(100dvh - var(--teable-top-banner-height, 0px));
+  flex-direction: column;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+}
+
+.content {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Native layouts measure their own content; reserve the source-owned header. */
+.content :global(#portal),
+.content :global(#portal > .h-screen) {
+  height: calc(100dvh - var(--teable-top-banner-height, 0px) - var(--fourdx-topbar-height, 0px));
+}

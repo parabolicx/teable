@@ -23,10 +23,12 @@ import { ExpandRecordWrap } from './ExpandRecordWrap';
 import { RecordEditor } from './RecordEditor';
 import { RecordHistory } from './RecordHistory';
 import { ExpandRecordModel } from './type';
+import { useRecordPresentation } from './useRecordPresentation';
 
 const skeletonRows = [72, 96, 64, 88, 76, 104];
 
 interface IExpandRecordProps {
+  primaryRecord?: boolean;
   recordId: string;
   recordIds?: string[];
   commentId?: string;
@@ -51,6 +53,7 @@ interface IExpandRecordProps {
 
 export const ExpandRecord = (props: IExpandRecordProps) => {
   const {
+    primaryRecord,
     model,
     visible,
     recordId,
@@ -77,6 +80,13 @@ export const ExpandRecord = (props: IExpandRecordProps) => {
   const defaultViewId = views?.[0]?.id;
   const viewId = useViewId() ?? defaultViewId;
   const baseId = useBaseId();
+  const recordPresentation = useRecordPresentation({
+    primaryRecord,
+    baseId,
+    tableId,
+    recordId,
+    visible,
+  });
   const allFields = useFields({ withHidden: true });
   const showFields = useFields();
 
@@ -160,6 +170,7 @@ export const ExpandRecord = (props: IExpandRecordProps) => {
 
   return (
     <ExpandRecordWrap
+      drawer={recordPresentation.drawer}
       model={isMobile ? ExpandRecordModel.Drawer : model ?? ExpandRecordModel.Modal}
       visible={visible}
       onClose={onClose}
@@ -168,6 +179,8 @@ export const ExpandRecord = (props: IExpandRecordProps) => {
       <div className="flex h-full flex-col">
         {tableId && recordId && (
           <ExpandRecordHeader
+            presentation={recordPresentation.headerPresentation}
+            onPresentationChange={recordPresentation.changePresentation}
             title={record?.title}
             recordHistoryVisible={recordHistoryVisible}
             commentVisible={commentVisible}
