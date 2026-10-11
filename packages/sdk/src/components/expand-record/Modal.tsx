@@ -25,7 +25,7 @@ export const Modal: FC<
           'h-full block rounded-lg p-0 max-w-4xl',
           className,
           drawer &&
-            'start-auto end-0 bottom-0 translate-x-0 translate-y-0 rounded-none sm:rounded-none border-y-0 border-e-0 data-[state=open]:animate-none data-[state=closed]:animate-none'
+            'z-20 start-auto end-0 bottom-0 translate-x-0 translate-y-0 rounded-none sm:rounded-none border-y-0 border-e-0 data-[state=open]:animate-none data-[state=closed]:animate-none'
         )}
         style={
           drawer

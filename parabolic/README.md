@@ -2,9 +2,11 @@
 
 This fork starts at the public Community source revision recorded in
 `upstream.json`. The installed release and source both report Teable 1.10.0,
-Next 16.1.6 and React 18.3.1. `Dockerfile` builds the frontend from source and
-layers it over the exact installed Community image. The backend, migrations,
-entrypoint, plugins and persistent storage remain pinned to that image.
+Next 16.1.6 and React 18.3.1. `Dockerfile` builds the frontend and Nest backend
+from source and layers their outputs over the exact installed Community image.
+Its runtime dependencies, workspace package builds, migrations, entrypoint,
+plugins and storage layout stay pinned to that matching baseline. This fork
+does not change the database schema or dependency contracts.
 
 ## Native interface
 
@@ -26,6 +28,8 @@ Build with `NEXT_PUBLIC_PARABOLIC_ENABLED=true` to enable these additions:
   speed, volume, fullscreen and load/error feedback. Its focused shortcuts do
   not trigger attachment navigation. Other attachment types retain their
   existing preview paths.
+- The source backend supports HTTP byte ranges for local attachment reads,
+  allowing existing video attachments to seek without replacing their files.
 
 Teable's name, logo and native branding remain in place. New controls inherit
 `@teable/ui-lib`, `background`, `foreground`, `border`, `primary`, `muted` and
@@ -70,10 +74,36 @@ docker build -f parabolic/Dockerfile \
 
 Use the frozen pnpm lockfile and Node 22.22.3. Native component tests live in
 `apps/nextjs-app/src/features/parabolic`, record tests in the SDK, and video
-tests alongside the shared viewer. Run the app typecheck, focused tests and
-production build before deploying. Back up the database and assets before
-replacing the app container. Keep the old image digest for rollback; this
-frontend migration does not require a schema migration.
+tests alongside the shared viewer. Backend attachment tests live alongside
+the attachment storage code. Run the app and backend typechecks, focused tests
+and production builds before deploying. Back up the database and assets before
+replacing the app container. Keep the old image digest for rollback; these
+changes do not require a schema migration.
+
+The `deps` stage installs both app and backend dependency graphs and generates
+the main/data Prisma types without connecting to a database. It can also be
+used for isolated backend checks:
+
+```sh
+docker build --target deps -f parabolic/Dockerfile \
+  -t fourdx-teable-native-deps:1.10.0 .
+docker run --rm --workdir /app --entrypoint pnpm \
+  fourdx-teable-native-deps:1.10.0 --filter @teable/backend exec \
+  tsc --project tsconfig.build.json --noEmit
+docker run --rm --workdir /app/apps/nestjs-backend --entrypoint pnpm \
+  fourdx-teable-native-deps:1.10.0 exec vitest run \
+  src/features/attachments/local-file-response.spec.ts \
+  src/features/attachments/attachments-read.spec.ts
+```
+
+The unit tests use temporary local files; they do not need deployment
+credentials or a running database. Database integration tests require a
+separate disposable database and must never target the installed instance.
+The production TypeScript configuration checks all backend source. The broader
+upstream `typecheck` script also includes unit/E2E fixtures with existing type
+errors; those need a separate cleanup before becoming a required check.
+The `builder` stage uses Teable's normal `nest build`, including its worker
+entries and mail templates. No compiled JavaScript is patched in the image.
 
 ## Upstream updates
 
@@ -82,7 +112,10 @@ branches and review upstream fixes before adopting them. Freezing the baseline
 does not prevent a later merge or selective backport. Resolve conflicts in
 source and repeat the native interaction checks.
 
-This Dockerfile is specifically a UI derivative of this backend baseline.
-For an upstream change affecting API contracts, schema or runtime dependencies,
-update and build the backend too using Teable's full source Dockerfile. Do not
-pair a newer arbitrary frontend revision with this old backend image.
+This Dockerfile supports source changes in the app and Nest backend against
+the recorded baseline. Nest leaves npm and workspace packages external, so
+their pinned runtime builds must remain compatible with the source. For an
+upstream change affecting workspace package behavior, schema, dependency
+versions or plugins, update the baseline and build the complete application
+using `dockers/teable/Dockerfile`. Review its migrations before deployment.
+Do not pair arbitrary newer source or lockfiles with this old runtime image.

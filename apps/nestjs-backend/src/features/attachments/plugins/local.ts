@@ -19,6 +19,7 @@ import { FileUtils } from '../../../utils';
 import { Encryptor } from '../../../utils/encryptor';
 import { normalizeImageDimensions } from '../../../utils/image-orientation';
 import { second } from '../../../utils/second';
+import type { ILocalFileRange } from '../local-file-response';
 import StorageAdapter from './adapter';
 import type {
   ILocalFileUpload,
@@ -206,8 +207,17 @@ export class LocalStorage implements StorageAdapter {
     return join(this.path, rename);
   }
 
-  read(path: string) {
-    return createReadStream(resolve(this.storageDir, path));
+  read(path: string, range?: ILocalFileRange) {
+    const filePath = resolve(this.storageDir, path);
+    return range ? createReadStream(filePath, range) : createReadStream(filePath);
+  }
+
+  getReadMetadata(path: string) {
+    const url = resolve(this.storageDir, path);
+    if (!fse.existsSync(url)) return;
+    const stat = fse.statSync(url);
+    if (!stat.isFile()) return;
+    return { size: stat.size, lastModified: stat.mtimeMs };
   }
 
   getLastModifiedTime(path: string) {

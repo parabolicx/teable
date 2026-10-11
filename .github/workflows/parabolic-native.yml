@@ -5,6 +5,7 @@ on:
       - 'apps/nextjs-app/src/features/parabolic/**'
       - 'apps/nextjs-app/src/features/app/**'
       - 'apps/nextjs-app/src/pages/_document.tsx'
+      - 'apps/nestjs-backend/src/features/attachments/**'
       - 'packages/sdk/src/components/expand-record/**'
       - 'packages/ui-lib/src/base/file/preview/video/**'
       - 'parabolic/**'
@@ -32,9 +33,12 @@ jobs:
         with:
           node-version: 22.22.3
           cache: pnpm
-      - run: pnpm --filter @teable/app... --filter @teable/db-main-prisma install --frozen-lockfile
-      - run: pnpm --filter @teable/db-main-prisma prisma-generate
+      - run: pnpm --filter @teable/app... --filter @teable/backend... install --frozen-lockfile
+      - run: pnpm --filter @teable/db-main-prisma --filter @teable/db-data-prisma build
       - run: pnpm --filter @teable/app typecheck
+      - run: pnpm --filter @teable/backend exec tsc --project tsconfig.build.json --noEmit
       - run: pnpm --filter @teable/app exec vitest run src/features/parabolic
       - run: pnpm --filter @teable/sdk exec vitest run src/components/expand-record/ExpandRecorder.spec.tsx src/components/expand-record/Modal.spec.tsx src/components/expand-record/useRecordPresentation.spec.tsx src/components/expand-record/VideoPreview.spec.tsx
+      - run: pnpm --filter @teable/backend exec vitest run src/features/attachments/local-file-response.spec.ts src/features/attachments/attachments-read.spec.ts src/features/attachments/attachments.service.spec.ts src/features/attachments/plugins/local.spec.ts
+      - run: pnpm --filter @teable/backend build
       - run: pnpm --filter @teable/app build

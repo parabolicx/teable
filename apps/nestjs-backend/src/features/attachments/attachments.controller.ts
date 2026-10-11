@@ -61,16 +61,14 @@ export class AttachmentsController {
     headers['Cross-Origin-Resource-Policy'] = 'unsafe-none';
     headers['Content-Security-Policy'] = '';
 
-    const hasCache = this.attachmentsService.localFileConditionalCaching(path, req.headers, res);
-    if (hasCache) {
-      res.set(headers);
-      res.status(304);
-      return;
-    }
-    const { fileStream, headers: fileHeaders } = await this.attachmentsService.readLocalFile(
-      path,
-      token
-    );
+    const {
+      fileStream,
+      headers: fileHeaders,
+      status,
+    } = await this.attachmentsService.readLocalFile(path, token, {
+      method: req.method,
+      headers: req.headers,
+    });
     Object.assign(headers, fileHeaders);
     if (responseContentDisposition) {
       // RFC 5987: the filename*= value is already percent-encoded — decode it
@@ -85,7 +83,8 @@ export class AttachmentsController {
         : responseContentDisposition;
     }
     res.set(headers);
-    return new StreamableFile(fileStream);
+    res.status(status);
+    return fileStream ? new StreamableFile(fileStream) : undefined;
   }
 
   @UseGuards(AuthGuard, DynamicAuthGuardFactory)

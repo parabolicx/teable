@@ -143,7 +143,13 @@ describe('Modal (ExpandRecord wrapper)', () => {
         </Modal>
       </Modal>
     );
-    const { rerender } = render(content(true));
+    const { getByRole, rerender } = render(content(true));
+    expect(
+      getByRole('button', { name: 'Record field', hidden: true }).closest('[role="dialog"]')
+    ).toHaveClass('z-20');
+    expect(
+      getByRole('button', { name: 'Nested field action', hidden: true }).closest('[role="dialog"]')
+    ).toHaveClass('z-50');
     expect(document.body.style.pointerEvents).toBe('none');
     rerender(content(false));
     expect(document.body.style.pointerEvents).not.toBe('none');

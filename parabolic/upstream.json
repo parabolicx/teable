@@ -3,6 +3,6 @@
   "revision": "5ef2238883cad7c3980084de9a9031135fb9734f",
   "version": "1.10.0",
   "runtimeImage": "ghcr.io/teableio/teable-community:release.2026-09-01T06-19-16Z.1709@sha256:69fbb810d98f3738adb3834d7aca24e4410c21cdb09d22f75b4e35dc1a690284",
-  "scope": "Source-built frontend over the pinned Community backend",
+  "scope": "Source-built frontend and backend over pinned Community runtime dependencies, plugins and migrations; no schema change",
   "featureFlag": "NEXT_PUBLIC_PARABOLIC_ENABLED=true"
 }
