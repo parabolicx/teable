@@ -3,6 +3,7 @@ import { useIsTouchDevice } from '@teable/sdk/hooks';
 import { useEffect, type FC, type PropsWithChildren } from 'react';
 import { useMount } from 'react-use';
 import { MainLayout } from '@/components/layout';
+import { ParabolicShell } from '@/features/parabolic/ParabolicShell';
 import { useAutoFavicon } from '../hooks/useAutoFavicon';
 
 export const AppLayout: FC<PropsWithChildren> = (props) => {
@@ -27,5 +28,13 @@ export const AppLayout: FC<PropsWithChildren> = (props) => {
     return () => document.body.removeEventListener('focusout', onFocusout);
   }, [isTouchDevice]);
 
-  return <MainLayout>{children}</MainLayout>;
+  return (
+    <MainLayout>
+      {process.env.NEXT_PUBLIC_PARABOLIC_ENABLED === 'true' ? (
+        <ParabolicShell>{children}</ParabolicShell>
+      ) : (
+        children
+      )}
+    </MainLayout>
+  );
 };

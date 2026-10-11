@@ -7,18 +7,25 @@ import { ExpandRecordModel } from './type';
 export const ExpandRecordWrap: FC<
   PropsWithChildren<{
     model?: ExpandRecordModel;
+    drawer?: boolean;
     modal?: boolean;
     visible?: boolean;
     onClose?: () => void;
     className?: string;
   }>
 > = (props) => {
-  const { children, model, visible, onClose, modal, className } = props;
+  const { children, model, drawer, visible, onClose, modal, className } = props;
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  if (model === ExpandRecordModel.Modal)
+  if (drawer || model === ExpandRecordModel.Modal)
     return (
-      <Modal visible={visible} onClose={onClose} modal={modal} className={className}>
+      <Modal
+        visible={visible}
+        onClose={onClose}
+        modal={drawer ? false : modal}
+        drawer={drawer}
+        className={className}
+      >
         {children}
       </Modal>
     );
@@ -31,7 +38,9 @@ export const ExpandRecordWrap: FC<
         closeable={false}
         ref={sheetRef}
       >
-        <ModalContext.Provider value={{ ref: sheetRef }}>{children}</ModalContext.Provider>
+        <ModalContext.Provider value={{ ref: sheetRef, isRecordModal: true }}>
+          {children}
+        </ModalContext.Provider>
       </SheetContent>
     </Sheet>
   );

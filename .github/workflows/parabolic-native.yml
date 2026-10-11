@@ -1,0 +1,40 @@
+name: Parabolic native interface
+on:
+  pull_request:
+    paths:
+      - 'apps/nextjs-app/src/features/parabolic/**'
+      - 'apps/nextjs-app/src/features/app/**'
+      - 'apps/nextjs-app/src/pages/_document.tsx'
+      - 'packages/sdk/src/components/expand-record/**'
+      - 'packages/ui-lib/src/base/file/preview/video/**'
+      - 'parabolic/**'
+      - '.github/workflows/parabolic-native.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-interface:
+    runs-on: ubuntu-latest
+    env:
+      HUSKY: '0'
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_PARABOLIC_ENABLED: 'true'
+      NEXT_BUILD_ENV_SOURCEMAPS: 'false'
+      NEXT_BUILD_ENV_SENTRY_ENABLED: 'false'
+      NEXT_BUILD_ENV_TYPECHECK: 'false'
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.13.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.3
+          cache: pnpm
+      - run: pnpm --filter @teable/app... --filter @teable/db-main-prisma install --frozen-lockfile
+      - run: pnpm --filter @teable/db-main-prisma prisma-generate
+      - run: pnpm --filter @teable/app typecheck
+      - run: pnpm --filter @teable/app exec vitest run src/features/parabolic
+      - run: pnpm --filter @teable/sdk exec vitest run src/components/expand-record/ExpandRecorder.spec.tsx src/components/expand-record/Modal.spec.tsx src/components/expand-record/useRecordPresentation.spec.tsx src/components/expand-record/VideoPreview.spec.tsx
+      - run: pnpm --filter @teable/app build

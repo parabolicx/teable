@@ -63,6 +63,40 @@ describe('Modal (ExpandRecord wrapper)', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('keeps the table interactive when the drawer uses a nonmodal native root', () => {
+    const onClose = vi.fn();
+    const { getByRole } = render(
+      <>
+        <button>Table action</button>
+        <Modal visible modal={false} drawer onClose={onClose}>
+          <button>Record action</button>
+        </Modal>
+      </>
+    );
+    expect(document.querySelector('[data-state="open"].fixed.inset-0')).toBeNull();
+    const tableAction = getByRole('button', { name: 'Table action' });
+    tableAction.focus();
+    fireEvent.pointerDown(tableAction);
+    expect(document.activeElement).toBe(tableAction);
+    expect(document.body.style.pointerEvents).not.toBe('none');
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('lets a nested native modal own and release its pointer lock', () => {
+    const content = (nestedOpen: boolean) => (
+      <Modal visible modal={false} drawer>
+        <button>Record field</button>
+        <Modal visible={nestedOpen}>
+          <button>Nested field action</button>
+        </Modal>
+      </Modal>
+    );
+    const { rerender } = render(content(true));
+    expect(document.body.style.pointerEvents).toBe('none');
+    rerender(content(false));
+    expect(document.body.style.pointerEvents).not.toBe('none');
+  });
+
   // Reproduces the bug where opening a nested modal Popover (e.g. SingleSelect)
   // makes a click inside DialogContent hit-test through to DialogOverlay. The
   // overlay click handler should detect that the pointer landed inside
