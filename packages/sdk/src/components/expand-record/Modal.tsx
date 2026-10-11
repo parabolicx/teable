@@ -67,11 +67,21 @@ export const Modal: FC<
           />
         }
         onKeyDown={(e) => {
-          if (e.key === 'Escape') {
+          if (e.key === 'Escape' && (!drawer || !e.defaultPrevented)) {
             onClose?.();
           }
           e.stopPropagation();
         }}
+        onEscapeKeyDown={
+          drawer
+            ? (event) => {
+                // Radix dispatches only to its highest layer, including when focus
+                // is on the uncovered table. Nested editors and selects retain Escape.
+                event.preventDefault();
+                onClose?.();
+              }
+            : undefined
+        }
         onPaste={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}

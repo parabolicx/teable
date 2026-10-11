@@ -46,6 +46,18 @@ database application. The companion gateway marker and chat theme changes
 must be present when deploying this image; see the 4DX `teable/network` and
 `teable/chat` sources. The agent PAT is never used by the browser interface.
 
+`4dx-native-ui.patch` records those companion changes in this fork so they are
+reviewable alongside the native frontend. From the 4DX workspace root, apply
+it to the existing gateway and chat sources before deployment:
+
+```sh
+git apply --check teable/source/parabolic/4dx-native-ui.patch
+git apply teable/source/parabolic/4dx-native-ui.patch
+```
+
+If the changes are already installed, `git apply --reverse --check` verifies
+that state. The patch contains no private configuration or credentials.
+
 ## Build and review
 
 From this repository root with Docker BuildKit enabled:

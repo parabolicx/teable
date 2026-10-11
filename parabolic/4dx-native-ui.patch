@@ -1,0 +1,99 @@
+diff --git a/teable/chat/public/app.js b/teable/chat/public/app.js
+index 474871c..e4fae0f 100644
+--- a/teable/chat/public/app.js
++++ b/teable/chat/public/app.js
+@@ -8,6 +8,7 @@
+   const embedded = initial.get('embedded') === '1';
+   if (embedded) {
+     document.body.dataset.chatEmbedded = 'true';
++    if (initial.get('nativeHost') === '1') document.body.dataset.chatNativeHost = 'true';
+     document.body.dataset.chatTheme = initial.get('theme') === 'dark' ? 'dark' : 'light';
+     $('embedded-toolbar').hidden = false;
+     $('context-open').textContent = 'Context';
+@@ -24,6 +25,31 @@
+ 
+   function trustedHost(event) { return embedded && window.parent !== window && event.origin === location.origin && event.source === window.parent; }
+ 
++  function applyHostTheme(message) {
++    if (!['dark', 'light'].includes(message.theme)) return;
++    document.body.dataset.chatTheme = message.theme;
++    const tokens = message.tokens;
++    if (!tokens || typeof tokens !== 'object' || Array.isArray(tokens)) return;
++    const properties = {
++      background: '--bg', foreground: '--ink', muted: '--chat-muted-surface',
++      'muted-foreground': '--muted', border: '--line', primary: '--green',
++      'primary-foreground': '--chat-primary-foreground', accent: '--green-soft',
++      destructive: '--red',
++    };
++    for (const [token, property] of Object.entries(properties)) {
++      const value = tokens[token];
++      if (typeof value === 'string' && value.length <= 120 &&
++        /^(?:hsl|hsla|rgb|rgba)\([\d\s.,%/+\-]+\)$|^#[a-f\d]{3,8}$/i.test(value) && CSS.supports('color', value)) {
++        document.body.style.setProperty(property, value);
++      }
++    }
++    // A shared background and font make the iframe match the native panel.
++    if (document.body.style.getPropertyValue('--bg')) document.body.style.setProperty('--surface', document.body.style.getPropertyValue('--bg'));
++    if (typeof tokens.radius === 'string' && /^(?:\d*\.)?\d+(?:px|rem|em)$/.test(tokens.radius)) document.body.style.setProperty('--chat-radius', tokens.radius);
++    if (typeof tokens['font-family'] === 'string' && tokens['font-family'].length <= 250 && !/[;{}<>\\]/.test(tokens['font-family'])) document.body.style.fontFamily = tokens['font-family'];
++    document.body.dataset.chatNativeTheme = 'true';
++  }
++
+   function hostContext(value) {
+     if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some((key) => !['app', 'baseId', 'tableId', 'viewId', 'recordIds'].includes(key))) return null;
+     const result = {};
+@@ -80,7 +106,7 @@
+       return;
+     }
+     if (message.type === '4dx-chat-theme') {
+-      if (['dark', 'light'].includes(message.theme)) document.body.dataset.chatTheme = message.theme;
++      applyHostTheme(message);
+       return;
+     }
+     if (message.type !== '4dx-chat-context' || !Number.isSafeInteger(message.revision) || message.revision < 0 || message.revision <= parentContextRevision) return;
+diff --git a/teable/chat/public/style.css b/teable/chat/public/style.css
+index 33c69fe..29865d2 100644
+--- a/teable/chat/public/style.css
++++ b/teable/chat/public/style.css
+@@ -12,3 +12,25 @@ body[data-chat-embedded][data-chat-theme=dark]{--bg:#242427;--surface:#1d1d20;--
+ .attachment-preview { display:flex; gap:8px; align-items:center; margin-top:8px; }
+ .attachment-preview[hidden] { display:none; }
+ .attachment-preview img, .message-photo { max-width:180px; max-height:160px; border-radius:8px; object-fit:contain; }
++
++/* Theme values arrive from the source-native Teable host after origin validation. */
++body[data-chat-embedded][data-chat-native-theme] { color-scheme: light dark; }
++body[data-chat-embedded][data-chat-native-theme][data-chat-theme=light] { color-scheme: light; }
++body[data-chat-embedded][data-chat-native-theme][data-chat-theme=dark] { color-scheme: dark; }
++body[data-chat-embedded][data-chat-native-theme] .btn-primary,
++body[data-chat-embedded][data-chat-native-theme] .toast { background: var(--green); color: var(--chat-primary-foreground, #fff); }
++body[data-chat-embedded][data-chat-native-theme] .btn-primary:hover:not(:disabled) { background: var(--green); filter: brightness(.95); }
++body[data-chat-embedded][data-chat-native-theme] .btn,
++body[data-chat-embedded][data-chat-native-theme] input,
++body[data-chat-embedded][data-chat-native-theme] select,
++body[data-chat-embedded][data-chat-native-theme] textarea { border-radius: var(--chat-radius, .5rem); }
++body[data-chat-embedded][data-chat-native-theme] .message.user,
++body[data-chat-embedded][data-chat-native-theme] .tool-call,
++body[data-chat-embedded][data-chat-native-theme] .tool-json { background: var(--chat-muted-surface, var(--bg)); }
++body[data-chat-embedded][data-chat-native-theme] :focus-visible { outline-color: var(--green); }
++body[data-chat-embedded][data-chat-native-theme] textarea:focus,
++body[data-chat-embedded][data-chat-native-theme] input:focus,
++body[data-chat-embedded][data-chat-native-theme] select:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 20%, transparent); }
++body[data-chat-embedded][data-chat-native-host] .embedded-toolbar { min-height: 30px; height: 30px; justify-content: flex-end; padding-block: 2px; }
++body[data-chat-embedded][data-chat-native-host] .embedded-toolbar > strong,
++body[data-chat-embedded][data-chat-native-host] #chat-close { display: none; }
+diff --git a/teable/network/gateway.mjs b/teable/network/gateway.mjs
+index 335dd32..d943fab 100644
+--- a/teable/network/gateway.mjs
++++ b/teable/network/gateway.mjs
+@@ -159,6 +159,11 @@ function versionNativeRecordAssets(html) {
+ /** Add external workspace assets outside Next's hydration root; leave its data intact. */
+ export function injectTopbar(html, csp = '') {
+   if (!/<\/head\s*>/i.test(html) || !/<\/body\s*>/i.test(html)) return html;
++  // The source fork owns this interface inside React. Its explicit document
++  // marker also disables the legacy asset-version adapter, avoiding two hosts.
++  const head = /<head\b[^>]*>([\s\S]*?)<\/head\s*>/i.exec(html)?.[1]
++    .replace(/<!--[\s\S]*?-->|<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, '') || '';
++  if (/<meta\b(?=[^>]*\bname=["']parabolic-native["'])(?=[^>]*\bcontent=["']v1["'])[^>]*>/i.test(head)) return html;
+   // A future strict policy should disable the customization, not weaken Teable.
+   const directives = new Map(csp.split(';').map(part => part.trim().split(/\s+/)).filter(parts => parts[0]).map(([key, ...values]) => [key.toLowerCase(), values]));
+   for (const type of ['script', 'style']) {

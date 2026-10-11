@@ -3,7 +3,7 @@ import type { ComponentProps } from 'react';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AssistantPanel } from './AssistantPanel';
 
-const { router } = vi.hoisted(() => ({
+const { router, theme } = vi.hoisted(() => ({
   router: {
     isReady: true,
     query: {
@@ -11,10 +11,11 @@ const { router } = vi.hoisted(() => ({
       slug: ['table', 'tbl0123456789ABCDEF', 'viw0123456789ABCDEF'],
     },
   },
+  theme: { resolvedTheme: 'dark', forcedTheme: undefined as string | undefined },
 }));
 
 vi.mock('next/router', () => ({ useRouter: () => router }));
-vi.mock('@teable/next-themes', () => ({ useTheme: () => ({ resolvedTheme: 'dark' }) }));
+vi.mock('@teable/next-themes', () => ({ useTheme: () => theme }));
 vi.mock('@teable/ui-lib', async () => {
   const { createElement, forwardRef } = await import('react');
   return {
@@ -61,10 +62,29 @@ afterAll(() => {
 
 beforeEach(() => {
   router.query.slug = ['table', tableId, 'viw0123456789ABCDEF'];
+  theme.resolvedTheme = 'dark';
+  theme.forcedTheme = undefined;
   localStorage.clear();
 });
 
 describe('native assistant host', () => {
+  it('uses the native forced theme when it differs from the resolved preference', async () => {
+    theme.resolvedTheme = 'light';
+    theme.forcedTheme = 'dark';
+    render(<AssistantPanel open onClose={vi.fn()} />);
+    const iframe = (await screen.findByTitle(
+      'Parabolic Assistant conversation'
+    )) as HTMLIFrameElement;
+    const post = vi.spyOn(iframe.contentWindow!, 'postMessage');
+    fireEvent.load(iframe);
+    expect(
+      post.mock.calls.some(
+        ([message]) => message.type === '4dx-chat-theme' && message.theme === 'dark'
+      )
+    ).toBe(true);
+    post.mockRestore();
+  });
+
   it('retains its conversation iframe through close, minimize, and native view navigation', async () => {
     const onClose = vi.fn();
     const { rerender } = render(<AssistantPanel open onClose={onClose} />);

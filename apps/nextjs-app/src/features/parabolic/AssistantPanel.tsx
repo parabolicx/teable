@@ -29,7 +29,8 @@ const widthStorageKey = '4dx.chat.sidebar.width.v1';
 export function AssistantPanel({ open, onClose }: IAssistantPanelProps) {
   const router = useRouter();
   const isRtl = useUiDirection() === 'rtl';
-  const { resolvedTheme } = useTheme();
+  const { forcedTheme, resolvedTheme } = useTheme();
+  const effectiveTheme = forcedTheme || resolvedTheme;
   const panelRef = useRef<HTMLElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const restoreRef = useRef<HTMLButtonElement>(null);
@@ -65,8 +66,8 @@ export function AssistantPanel({ open, onClose }: IAssistantPanelProps) {
   const contextRef = useRef<IAssistantContext>(context);
   contextRef.current = context;
   const revisionRef = useRef({ key: '', revision: -1 });
-  const themeRef = useRef(resolvedTheme);
-  themeRef.current = resolvedTheme;
+  const themeRef = useRef(effectiveTheme);
+  themeRef.current = effectiveTheme;
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
@@ -169,7 +170,7 @@ export function AssistantPanel({ open, onClose }: IAssistantPanelProps) {
     // next-themes applies the native class in the same commit; read its final computed values.
     const id = requestAnimationFrame(sendTheme);
     return () => cancelAnimationFrame(id);
-  }, [resolvedTheme, open, sendTheme]);
+  }, [effectiveTheme, open, sendTheme]);
 
   useEffect(() => {
     if (minimized && open) restoreRef.current?.focus();
@@ -265,7 +266,7 @@ export function AssistantPanel({ open, onClose }: IAssistantPanelProps) {
           <iframe
             ref={iframeRef}
             title="Parabolic Assistant conversation"
-            src="/chat/?embedded=1"
+            src="/chat/?embedded=1&nativeHost=1"
             className="size-full border-0 bg-background"
             allow="camera 'none'; microphone 'self'; geolocation 'none'"
             referrerPolicy="same-origin"

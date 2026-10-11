@@ -1,3 +1,4 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@teable/ui-lib';
 import { fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Modal } from './Modal';
@@ -79,6 +80,57 @@ describe('Modal (ExpandRecord wrapper)', () => {
     fireEvent.pointerDown(tableAction);
     expect(document.activeElement).toBe(tableAction);
     expect(document.body.style.pointerEvents).not.toBe('none');
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.keyDown(tableAction, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes a focused drawer once when native Escape and React bubbling both run', () => {
+    const onClose = vi.fn();
+    const { getByRole } = render(
+      <Modal visible modal={false} drawer onClose={onClose}>
+        <button>Record action</button>
+      </Modal>
+    );
+    const recordAction = getByRole('button', { name: 'Record action' });
+    recordAction.focus();
+    fireEvent.keyDown(recordAction, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves drawer Escape to a nested native modal', () => {
+    const onClose = vi.fn();
+    const onNestedClose = vi.fn();
+    const { getByRole } = render(
+      <Modal visible modal={false} drawer onClose={onClose}>
+        <Modal visible onClose={onNestedClose}>
+          <button>Nested record action</button>
+        </Modal>
+      </Modal>
+    );
+    fireEvent.keyDown(getByRole('button', { name: 'Nested record action' }), { key: 'Escape' });
+    expect(onNestedClose).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('dismisses a nested field select without closing its drawer', () => {
+    const onClose = vi.fn();
+    const { getByRole, queryByRole } = render(
+      <Modal visible modal={false} drawer onClose={onClose}>
+        <Select defaultValue="first">
+          <SelectTrigger aria-label="Field option">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="first">First option</SelectItem>
+            <SelectItem value="second">Second option</SelectItem>
+          </SelectContent>
+        </Select>
+      </Modal>
+    );
+    fireEvent.click(getByRole('combobox', { name: 'Field option' }));
+    fireEvent.keyDown(getByRole('option', { name: 'First option' }), { key: 'Escape' });
+    expect(queryByRole('option', { name: 'First option' })).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
   });
 

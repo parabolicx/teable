@@ -274,7 +274,7 @@ export const ExpandRecordHeader = (props: IExpandRecordHeader) => {
         </Select>
       )}
       {!isMobile && <Separator className="h-6" orientation="vertical" />}
-      <Button variant={'ghost'} size={'icon-xs'} onClick={onClose}>
+      <Button variant={'ghost'} size={'icon-xs'} onClick={onClose} aria-label="Close record detail">
         <X className="size-4 shrink-0" />
       </Button>
     </div>
